@@ -20,7 +20,7 @@ class LLMQueryHandler:
         """
         # Process the data first
         processor = DataProcessor(water_data, energy_data)
-        self.water_data, self.energy_data = processor.process_data()
+        self.water_data, self.energy_data, self.home_capacity = processor.process_data()
         
         # Initialize Azure OpenAI client
         self.client = AzureOpenAI(
@@ -53,11 +53,14 @@ class LLMQueryHandler:
 
         You have access to the following data for all years:
         
-        New homes capability based on water supply risk levels:
+        Water supply risk levels:
         {context['water']}
         
-        New homes capability based on energy surplus/deficit:
+        Energy supply surplus/deficit:
         {context['energy']}
+
+        Home capacity based on water supply risk levels and energy supply surplus/deficit:
+        {context['home_capacity']}
 
         Water supply data is categorized into risk levels:
         - High capacity (>1): Strong positive value, best for new homes
@@ -78,7 +81,10 @@ class LLMQueryHandler:
 
         Example format:
         **Kensington and Chelsea**: *1000* new homes supported in 2030 but rapidly deteriorating trend to 2040.
-        Provide accurate and concise answers based on the data, and always quote numbers where you can."""
+        Provide accurate and concise answers based on the data, and always quote numbers where you can.
+        Open with the answer in bold, and explanation below.
+        Always explain whether analysis is based on water supply risk levels or energy supply surplus/deficit.
+        """
 
         try:
             # Make the API call

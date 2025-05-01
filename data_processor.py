@@ -20,13 +20,17 @@ class DataProcessor:
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Processed water and energy dataframes
         """
+        # Calculate home capacity - this needs to be done before processing the water and energy data as it needs the raw water data
+        self._process_home_capacity()
+    
         # Process water data
         self._process_water_data()
         
         # Process energy data
         self._process_energy_data()
         
-        return self.water_data, self.energy_data
+        return self.water_data, self.energy_data, self.home_capacity
+
     
     def _process_water_data(self):
         """Process water data and add derived columns."""
@@ -80,11 +84,11 @@ class DataProcessor:
         # Get year columns
         year_cols = [col for col in self.energy_data.columns if col not in ['LAD24CD', 'LAD24NM']]
         
-        # Convert energy values to number of new homes (divide by 0.1)
-        for year in year_cols:
-            self.energy_data[year] = self.energy_data[year].apply(
-                lambda x: x / 0.1 if x != 1000 else 1000
-            )
+        # # Convert energy values to number of new homes (divide by 0.1)
+        # for year in year_cols:
+        #     self.energy_data[year] = self.energy_data[year].apply(
+        #         lambda x: x / 0.1 if x != 1000 else 1000
+        #     )
         
         # Add trend columns
         self.energy_data['energy_trend'] = self.energy_data.apply(
@@ -111,6 +115,18 @@ class DataProcessor:
             'energy_max': 'homes_max',
             'energy_min': 'homes_min'
         })
+
+
+    def _process_home_capacity(self) -> pd.DataFrame:
+
+        year_cols = [col for col in self.water_data.columns if col not in ['LAD24CD', 'LAD24NM']]
+        binary_water_table = self.water_data[year_cols].map(lambda x: 1 if x > 0 else 0)
+
+        home_capacity = binary_water_table[year_cols] * (self.energy_data[year_cols] / 0.1)
+        home_capacity = pd.concat([self.water_data[['LAD24CD', 'LAD24NM']], home_capacity], axis=1)
+
+        self.home_capacity = home_capacity
+
     
     def _calculate_trend(self, row: pd.Series, year_cols: list) -> str:
         """Calculate the trend of values over time."""

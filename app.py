@@ -8,6 +8,11 @@ import pandas as pd
 import requests
 from llm_handler import LLMQueryHandler
 from data_processor import DataProcessor
+
+# Initialize Dash app
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
+
+
 # Load GeoJSON data
 geojson_url = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Local_Authority_Districts_May_2024_Boundaries__UK_BSC/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson'
 response = requests.get(geojson_url)
@@ -17,7 +22,7 @@ geojson_data = response.json()
 water_output_csv = pd.read_csv('data/LA_water_output.csv')
 energy_output_csv = pd.read_csv('data/LA_energy_output.csv')
 processor = DataProcessor(water_output_csv, energy_output_csv)
-processed_water_data, processed_energy_data = processor.process_data()
+processed_water_data, processed_energy_data, processed_home_capacity = processor.process_data()
 
 
 # Define colorscale (these colors will be used for both water and energy data)
@@ -143,8 +148,6 @@ style_handle = assign("""function(feature, context){
     return style;
 }""")
 
-# Initialize Dash app
-app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 
 # Initialize LLM query handler
 llm_handler = LLMQueryHandler(water_output_csv, energy_output_csv)
@@ -257,7 +260,7 @@ app.layout = html.Div([
                 ),
                 dbc.Tab(
                     html.Div([
-                        html.H3("Energy Analysis"),
+                        html.H3("Energy Forecast"),
                         html.Div(id="energy-table-container")
                     ], style={'padding': '20px'}),
                     label="Energy",
@@ -265,11 +268,19 @@ app.layout = html.Div([
                 ),
                 dbc.Tab(
                     html.Div([
-                        html.H3("Water Analysis"),
+                        html.H3("Water Forecast"),
                         html.Div(id="water-table-container")
                     ], style={'padding': '20px'}),
                     label="Water",
                     tab_id="tab-water"
+                ),
+                dbc.Tab(
+                    html.Div([
+                        html.H3("Home Capacity"),
+                        html.Div(id="home-capacity-table-container")
+                    ], style={'padding': '20px'}),
+                    label="Home Capacity",
+                    tab_id="tab-capacity"
                 )
             ],
             id="tabs",
@@ -404,6 +415,36 @@ def display_water_table(active_tab):
             }
         )
     return None
+
+# Callback to display home capacity table
+@app.callback(
+    Output('home-capacity-table-container', 'children'),
+    Input('tabs', 'active_tab')
+)
+def display_home_capacity_table(active_tab):
+    if active_tab == 'tab-capacity':
+        return dash_table.DataTable(
+            data=processed_home_capacity.to_dict('records'),
+            columns=[{"name": i, "id": i} for i in processed_home_capacity.columns],
+            page_size=10,
+            filter_action="native",
+            sort_action="native",
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'textAlign': 'left',
+                'padding': '10px',
+                'whiteSpace': 'normal',
+                'height': 'auto',
+            },
+            style_header={
+                'backgroundColor': '#011638',
+                'color': 'white',
+                'fontWeight': 'bold'
+            }
+        )
+    return None
+    
+
 
 # Run the app
 if __name__ == '__main__':
