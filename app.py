@@ -227,11 +227,11 @@ text_query = html.Div(
             id="text-query",
             placeholder="Ask me a question...",
             type="text",
-            debounce=True,  # Add debounce to prevent multiple rapid updates
-            n_submit=0,  # Track Enter key presses
+            debounce=True,
+            n_submit=0,
         ),
         html.Br(),
-        html.P(id="text-output"),
+        dcc.Markdown(id="text-output"),
     ],
     style={'padding': '20px'}
 )
@@ -239,7 +239,7 @@ text_query = html.Div(
 # Define the layout
 app.layout = html.Div([
     dbc.NavbarSimple(
-        brand="UK Map Dashboard",
+        brand="H I P E",
         brand_href="#",
         color="#011638",
         dark=True,
@@ -340,22 +340,14 @@ def update_geojson(year, data_source):
 # Callback to update text output
 @app.callback(
     Output('text-output', 'children'),
-    Input('text-query', 'n_submit'),  # Trigger on Enter key press
-    [State('text-query', 'value')]  # Get the current input value
+    Input('text-query', 'n_submit'),
+    [State('text-query', 'value')]
 )
 def update_text_output(n_submit, query):
-    if n_submit > 0 and query:  # Only execute if Enter was pressed and there's a query
+    if n_submit > 0 and query:
         response = llm_handler.process_query(query)
-        # Split response into paragraphs and format with HTML
-        paragraphs = response.split('\n\n')
-        formatted_response = []
-        for p in paragraphs:
-            if p.strip():
-                # Convert markdown-style formatting to HTML
-                p = p.replace('**', '').replace('*', '')  # Remove markdown
-                formatted_response.append(html.P(p))
-        return formatted_response
-    return html.P('Press Enter to submit your question')
+        return response
+    return 'Press Enter to submit your question'
 
 # Callback to display energy data table
 @app.callback(
@@ -368,6 +360,8 @@ def display_energy_table(active_tab):
             data=processed_energy_data.to_dict('records'),
             columns=[{"name": i, "id": i} for i in processed_energy_data.columns],
             page_size=10,
+            filter_action="native",
+            sort_action="native",
             style_table={'overflowX': 'auto'},
             style_cell={
                 'textAlign': 'left',
@@ -394,6 +388,8 @@ def display_water_table(active_tab):
             data=processed_water_data.to_dict('records'),
             columns=[{"name": i, "id": i} for i in processed_water_data.columns],
             page_size=10,
+            filter_action="native",
+            sort_action="native",
             style_table={'overflowX': 'auto'},
             style_cell={
                 'textAlign': 'left',
