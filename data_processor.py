@@ -121,8 +121,9 @@ class DataProcessor:
 
         year_cols = [col for col in self.water_data.columns if col not in ['LAD24CD', 'LAD24NM']]
         binary_water_table = self.water_data[year_cols].map(lambda x: 1 if x > 0 else 0)
+        filtered_energy_table = self.energy_data[year_cols].map(lambda x: x if x > 0 else 0)
 
-        home_capacity = binary_water_table[year_cols] * (self.energy_data[year_cols] / 0.1)
+        home_capacity = binary_water_table[year_cols] * filtered_energy_table[year_cols]
         home_capacity = pd.concat([self.water_data[['LAD24CD', 'LAD24NM']], home_capacity], axis=1)
 
         self.home_capacity = home_capacity
