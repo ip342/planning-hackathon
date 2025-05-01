@@ -48,19 +48,22 @@ class LLMQueryHandler:
         context = self._prepare_context()
         
         # Create the system message with context
-        self.system_message = f"""You are an AI assistant communicating water supply and energy data for UK Local Authority Districts. 
-        The data shows water supply risk levels and energy capacity for new homes.
+        self.system_message = f"""You are an AI assistant communicating water supply and energy data for UK Local Authority Districts.
+        This information has been used to also calculate total number of new homes based on water supply risk levels, energy supply surplus/deficit,
+        and housing targets for each Local Authority District.
 
         You have access to the following data for all years:
         
         Water supply risk levels:
         {context['water']}
         
-        Energy supply surplus/deficit:
+        Home capacity taking into account both energy supply and housing targets:
         {context['energy']}
 
-        Home capacity based on water supply risk levels and energy supply surplus/deficit:
+        Home capacity based on both water supply risk levels and energy supply and housing targets:
         {context['home_capacity']}
+
+        You may have to sum values for different years and across different Local Authority Districts to get a total.
 
         Water supply data is categorized into risk levels:
         - High capacity (>1): Strong positive value, best for new homes
@@ -68,9 +71,11 @@ class LLMQueryHandler:
         - Low risk deficit (-1 to 0): Small negative value, minor issues
         - High risk deficit (<-1): Large negative value, significant issues
 
-        Energy data shows potential new homes based on energy surplus/deficit:
-        - Positive values: Number of potential new homes supported
-        - Negative values: Energy deficit (number of homes that would exceed capacity)
+        Energy data shows the energy surplus/deficit per Local Authority District per year when compared to housing targets
+        in each year.
+
+        Home capacity is calculated by multiplying the water supply risk level by the energy supply surplus/deficit,
+        taking 0.1 as the number of homes per unit of excess energy in MW available. 
 
         Format your responses using markdown:
         - Use **bold** for important values and trends
@@ -80,10 +85,17 @@ class LLMQueryHandler:
         - Use > for important notes or warnings
 
         Example format:
-        **Kensington and Chelsea**: *1000* new homes supported in 2030 but rapidly deteriorating trend to 2040.
+        **10,000 homes**: The total number of homes that there is capacity for in the UK in 2030. The Local Authority Districta
+        with the highest home capacities are *London* (3,500 homes), *Manchester* (2,000 homes), and *Birmingham* (1,500 homes).
+    
+        ALWAYS start with the exact answer in bold, and explanation below.
+        If a question refers to a specific table, use the data from that table.
+            (e.g. water utility --> water table,
+            energy infrastructure --> energy table,
+            building new homes --> home capacity table),
+        only use the data from that table.
         Provide accurate and concise answers based on the data, and always quote numbers where you can.
-        Open with the answer in bold, and explanation below.
-        Always explain whether analysis is based on water supply risk levels or energy supply surplus/deficit.
+        Explain whether analysis is based on water supply risk levels or energy supply surplus/deficit.
         """
 
         try:
@@ -94,8 +106,7 @@ class LLMQueryHandler:
                     {"role": "system", "content": self.system_message},
                     {"role": "user", "content": query}
                 ],
-                temperature=0.7,
-                max_tokens=500
+                temperature=0.5
             )
             
             return completion.choices[0].message.content
@@ -120,7 +131,7 @@ class LLMQueryHandler:
             if region_data:  # Only include regions with data
                 water_context.append(
                     f"{row['LAD24NM']}:\n"
-                    f"  Risk Levels: {' | '.join(region_data)}\n"
+                    f"  Water Supply Risk Level: {' | '.join(region_data)}\n"
                     f"  Trend: {row['risk_trend']}\n"
                     f"  5-year change: {row['risk_change_5yr']:.1f}%\n"
                     f"  Average Risk: {row['risk_avg']}\n"
@@ -138,17 +149,32 @@ class LLMQueryHandler:
             if region_data:  # Only include regions with data
                 energy_context.append(
                     f"{row['LAD24NM']}:\n"
-                    f"  Potential New Homes: {' | '.join(region_data)}\n"
+                    f"  Energy Supply: {' | '.join(region_data)}\n"
                     f"  Trend: {row['homes_trend']}\n"
                     f"  5-year change: {row['homes_change_5yr']:.1f}%\n"
                     f"  Average: {row['homes_avg']:.0f} homes\n"
                     f"  Range: {row['homes_min']:.0f} to {row['homes_max']:.0f} homes"
                 )
+
+        home_capacity_context = []
+        for _, row in self.home_capacity.iterrows():
+            region_data = []
+            for year in self.home_capacity.columns[2:]:
+                value = row[year]
+                region_data.append(f"{year}: {value:.0f} homes")
+            if region_data:  # Only include regions with data
+                home_capacity_context.append(
+                    f"{row['LAD24NM']}:\n"
+                    f"  Home Capacity: {' | '.join(region_data)}\n"
+                )
         
         return {
             'water': '\n'.join(water_context) if water_context else "No water risk data available.",
-            'energy': '\n'.join(energy_context) if energy_context else "No new homes data available."
+            'energy': '\n'.join(energy_context) if energy_context else "No new homes data available.",
+            'home_capacity': '\n'.join(home_capacity_context) if home_capacity_context else "No home capacity data available."
         }
+    
+
     
     def _get_highest_value(self, data: pd.DataFrame, year: int, data_type: str) -> str:
         """Get the region with the highest value for the given year."""
