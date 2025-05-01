@@ -48,7 +48,9 @@ class LLMQueryHandler:
         context = self._prepare_context()
         
         # Create the system message with context
-        system_message = f"""You are a helpful assistant that answers questions about water supply risk levels and potential new home construction in the UK.
+        self.system_message = f"""You are an AI assistant communicating water supply and energy data for UK Local Authority Districts. 
+        The data shows water supply risk levels and energy capacity for new homes.
+
         You have access to the following data for all years:
         
         New homes capability based on water supply risk levels:
@@ -57,32 +59,33 @@ class LLMQueryHandler:
         New homes capability based on energy surplus/deficit:
         {context['energy']}
 
-        Please provide accurate and concise answers based on this data.
-        When discussing trends or changes, consider the full range of available years.
-        You can also discuss:
-        - Trends (improving, deteriorating, or stable)
-        - 5-year percentage changes
-        - Risk level changes over time
-        
-        Note: 
-        - Water supply data is categorized into risk levels based on the value:
-          * High capacity (>1): Sufficient water for new homes
-          * Low capacity (0-1): Limited water availability
-          * Low risk deficit (-1 to 0): Minor water deficit
-          * High risk deficit (<-1): Significant water deficit
-        - Positive values indicate water capacity for new homes
-        - Negative values indicate water deficit
-        - Energy data has been converted to represent the number of new homes that could be built
-          based on the energy surplus/deficit in each region (each unit of energy surplus/deficit = 0.1 new homes).
-          
-          Make your answer incredibly concise. Only respond with boroughs names, values and trends. """
-        
+        Water supply data is categorized into risk levels:
+        - High capacity (>1): Strong positive value, best for new homes
+        - Low capacity (0-1): Weak positive value, limited capacity
+        - Low risk deficit (-1 to 0): Small negative value, minor issues
+        - High risk deficit (<-1): Large negative value, significant issues
+
+        Energy data shows potential new homes based on energy surplus/deficit:
+        - Positive values: Number of potential new homes supported
+        - Negative values: Energy deficit (number of homes that would exceed capacity)
+
+        Format your responses using markdown:
+        - Use **bold** for important values and trends
+        - Use *italics* for emphasis
+        - Separate paragraphs with blank lines
+        - Use bullet points for lists
+        - Use > for important notes or warnings
+
+        Example format:
+        **Kensington and Chelsea**: *1000* new homes supported in 2030 but rapidly deteriorating trend to 2040.
+        Provide accurate and concise answers based on the data, and always quote numbers where you can."""
+
         try:
             # Make the API call
             completion = self.client.chat.completions.create(
                 model=AZURE_OPENAI_MODEL,
                 messages=[
-                    {"role": "system", "content": system_message},
+                    {"role": "system", "content": self.system_message},
                     {"role": "user", "content": query}
                 ],
                 temperature=0.7,
