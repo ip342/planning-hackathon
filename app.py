@@ -232,9 +232,10 @@ text_query = html.Div(
             type="text",
             debounce=True,
             n_submit=0,
+            size="lg"
         ),
         html.Br(),
-        dcc.Markdown(id="text-output"),
+        dcc.Markdown(id="text-output", style={'fontSize': '1.2rem'}),
     ],
     style={'padding': '20px'}
 )
