@@ -226,16 +226,23 @@ map_component = html.Div([
 # Text query component
 text_query = html.Div(
     [
-        dbc.Input(
+        dbc.Textarea(
             id="text-query",
             placeholder="Ask me a question...",
-            type="text",
+            style={
+                'width': '100%',
+                'minHeight': '100px',
+                'resize': 'vertical',
+                'fontSize': '16px',
+                'padding': '10px',
+                'borderRadius': '5px',
+                'border': '1px solid #ccc'
+            },
             debounce=True,
             n_submit=0,
-            size="lg"
         ),
         html.Br(),
-        dcc.Markdown(id="text-output", style={'fontSize': '1.2rem'}),
+        dcc.Markdown(id="text-output"),
     ],
     style={'padding': '20px'}
 )
