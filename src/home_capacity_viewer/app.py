@@ -6,8 +6,9 @@ from dash_extensions.javascript import assign
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import requests
-from llm_handler import LLMQueryHandler
-from data_processor import DataProcessor
+import os
+from home_capacity_viewer.llm_handler import LLMQueryHandler
+from home_capacity_viewer.data_processor import DataProcessor
 
 # Initialize Dash app
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
@@ -19,8 +20,8 @@ response = requests.get(geojson_url)
 geojson_data = response.json()
 
 # Load CSV data
-water_output_csv = pd.read_csv('data/LA_water_output.csv')
-energy_output_csv = pd.read_csv('data/LA_energy_output.csv')
+water_output_csv = pd.read_csv('src/data/LA_water_output.csv')
+energy_output_csv = pd.read_csv('src/data/LA_energy_output.csv')
 processor = DataProcessor(water_output_csv, energy_output_csv)
 processed_water_data, processed_energy_data, processed_home_capacity = processor.process_data()
 

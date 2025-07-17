@@ -84,12 +84,6 @@ class DataProcessor:
         # Get year columns
         year_cols = [col for col in self.energy_data.columns if col not in ['LAD24CD', 'LAD24NM']]
         
-        # # Convert energy values to number of new homes (divide by 0.1)
-        # for year in year_cols:
-        #     self.energy_data[year] = self.energy_data[year].apply(
-        #         lambda x: x / 0.1 if x != 1000 else 1000
-        #     )
-        
         # Add trend columns
         self.energy_data['energy_trend'] = self.energy_data.apply(
             lambda row: self._calculate_trend(row, year_cols), axis=1

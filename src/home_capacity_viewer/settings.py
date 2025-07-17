@@ -40,5 +40,5 @@ elif MODEL_PROVIDER == 'openai':
                          OPENAI_API_KEY, OPENAI_MODEL are required. Please check your .env file.") 
 
 else:
-    raise ValueError(f"Invalid model provider: {MODEL_PROVIDER}.
+    raise ValueError(f"Invalid model provider: {MODEL_PROVIDER}. \
                      Must be either 'openai' or 'azure'")

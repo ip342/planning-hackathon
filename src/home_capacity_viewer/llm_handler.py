@@ -1,8 +1,8 @@
 import os
 from typing import Dict
 import pandas as pd
-from utils.settings import CLIENT,  MODEL
-from utils.data_processor import DataProcessor
+from home_capacity_viewer.settings import CLIENT,  MODEL
+from home_capacity_viewer.data_processor import DataProcessor
 
 class LLMQueryHandler:
     def __init__(self, water_data: pd.DataFrame, energy_data: pd.DataFrame):
