@@ -1,13 +1,8 @@
-from typing import Dict, Any, Optional
+import os
+from typing import Dict
 import pandas as pd
-from openai import AzureOpenAI
-from settings import (
-    AZURE_OPENAI_MODEL,
-    OPENAI_API_VERSION,
-    AZURE_OPENAI_ENDPOINT,
-    AZURE_OPENAI_KEY
-)
-from data_processor import DataProcessor
+from home_capacity_viewer.settings import CLIENT,  MODEL
+from home_capacity_viewer.data_processor import DataProcessor
 
 class LLMQueryHandler:
     def __init__(self, water_data: pd.DataFrame, energy_data: pd.DataFrame):
@@ -22,17 +17,12 @@ class LLMQueryHandler:
         processor = DataProcessor(water_data, energy_data)
         self.water_data, self.energy_data, self.home_capacity = processor.process_data()
         
-        # Initialize Azure OpenAI client
-        self.client = AzureOpenAI(
-            api_version=OPENAI_API_VERSION,
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            azure_deployment=AZURE_OPENAI_MODEL,
-            api_key=AZURE_OPENAI_KEY,
-        )
-        
+        self.client = CLIENT
+        self.model = MODEL
+    
     def process_query(self, query: str) -> str:
         """
-        Process a user query and generate a response using Azure OpenAI.
+        Process a user query and generate a response.
         
         Args:
             query (str): The user's text query
@@ -101,7 +91,7 @@ class LLMQueryHandler:
         try:
             # Make the API call
             completion = self.client.chat.completions.create(
-                model=AZURE_OPENAI_MODEL,
+                model=self.model,
                 messages=[
                     {"role": "system", "content": self.system_message},
                     {"role": "user", "content": query}

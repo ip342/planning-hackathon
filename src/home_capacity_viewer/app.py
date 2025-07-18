@@ -6,12 +6,16 @@ from dash_extensions.javascript import assign
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import requests
-from llm_handler import LLMQueryHandler
-from data_processor import DataProcessor
+from home_capacity_viewer.llm_handler import LLMQueryHandler
+from home_capacity_viewer.data_processor import DataProcessor
+from home_capacity_viewer.database import DatabaseManager
 
 # Initialize Dash app
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 
+# Initialize database
+db_manager = DatabaseManager("sqlite:///home_capacity_data.db")
+db_manager.create_tables()
 
 # Load GeoJSON data
 geojson_url = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Local_Authority_Districts_May_2024_Boundaries__UK_BSC/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson'
@@ -19,10 +23,21 @@ response = requests.get(geojson_url)
 geojson_data = response.json()
 
 # Load CSV data
-water_output_csv = pd.read_csv('data/LA_water_output.csv')
-energy_output_csv = pd.read_csv('data/LA_energy_output.csv')
-processor = DataProcessor(water_output_csv, energy_output_csv)
-processed_water_data, processed_energy_data, processed_home_capacity = processor.process_data()
+water_output_csv = pd.read_csv('src/data/LA_water_output.csv')
+energy_output_csv = pd.read_csv('src/data/LA_energy_output.csv')
+
+# Process data for display (with risk levels)
+display_processor = DataProcessor(water_output_csv, energy_output_csv)
+processed_water_data, processed_energy_data, processed_home_capacity = display_processor.process_data(convert_water_to_risk_level=True)
+
+# Process data for database and LLM querying (without risk levels) and load into database
+db_processor = DataProcessor(water_output_csv, energy_output_csv)
+db_water_data, db_energy_data, db_home_capacity = db_processor.process_data(convert_water_to_risk_level=False)
+
+# Load data into database
+db_manager.load_data(db_water_data, 'water')
+db_manager.load_data(db_energy_data, 'energy')
+db_manager.load_data(db_home_capacity, 'home_capacity')
 
 
 # Define colorscale (these colors will be used for both water and energy data)
@@ -456,4 +471,4 @@ def display_home_capacity_table(active_tab):
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
