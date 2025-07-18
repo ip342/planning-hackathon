@@ -9,6 +9,8 @@ dependencies = [
     "dash-bootstrap-components==1.5.0",
     "dash-extensions==1.0.4",
     "dash-leaflet==1.0.4",
+    "langchain>=0.3.26",
+    "langchain-openai>=0.2.13",
     "openai==1.56.1",
     "pandas==2.2.0",
     "pyarrow>=20.0.0",
