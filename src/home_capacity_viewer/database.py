@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
+from sqlalchemy import inspect
 import pandas as pd
 
 Base = declarative_base()
@@ -90,31 +91,27 @@ class DatabaseManager:
         """Generic method to load data into database"""
         session = self.get_session()
         try:
+            # Clear existing data for this table
+            session.query(model_class).delete()
+            
+            # Load new data
             for _, row in df.iterrows():
-                # Base fields
                 record_data = {
                     'lad24cd': row['LAD24CD'],
                     'lad24nm': row['LAD24NM'],
                     **self._create_year_data_dict(row)
                 }
-                
                 record = model_class(**record_data)
                 session.add(record)
             
             session.commit()
-            print(f"Loaded {len(df)} {model_class.__name__} records")
         except Exception as e:
             session.rollback()
-            print(f"Error loading {model_class.__name__} data: {e}")
         finally:
             session.close()
         
     def load_data(self, df: pd.DataFrame, data_type: str):
-        """Load data into database"""
-        if getattr(self, '_data_exists', False):
-            print(f"Skipping {data_type} data load - database already exists")
-            return
-            
+        """Load data into database (with upsert logic to prevent duplicates)"""
         model_map = {
             'water': WaterData,
             'energy': EnergyData,
@@ -125,6 +122,18 @@ class DatabaseManager:
             raise ValueError(f"Unknown data type: {data_type}. Use 'water', 'energy', or 'home_capacity'")
             
         self._load_data_generic(df, model_map[data_type])
-        print(f"Loaded {len(df)} {data_type} records")
     
- 
+    def get_table_schemas(self) -> str:
+        """Get table names and schemas of all tables in the database"""
+        inspector = inspect(self.engine)
+        tables = inspector.get_table_names()
+        
+        schemas = []
+        for table_name in tables:
+            columns = inspector.get_columns(table_name)
+            schema_info = f"\n{table_name}:\n"
+            for column in columns:
+                schema_info += f"  {column['name']} ({column['type']})\n"
+            schemas.append(schema_info)
+        
+        return "".join(schemas)
