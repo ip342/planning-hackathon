@@ -5,17 +5,22 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "dash==2.14.2",
+    "dash>=3.0.0",
     "dash-bootstrap-components==1.5.0",
-    "dash-extensions==1.0.4",
+    "dash-extensions==2.0.4",
     "dash-leaflet==1.0.4",
-    "langchain>=0.3.26",
+    "langchain==0.3.21",
+    "langchain-community>=0.3.0",
+    "langchain-core>=0.3.0",
     "langchain-openai>=0.2.13",
-    "openai==1.56.1",
-    "pandas==2.2.0",
-    "pyarrow>=20.0.0",
+    "langflow==1.5.0",
+    "more-itertools>=10.0.0",
+    "openai==1.68.2",
+    "pandas==2.2.3",
+    "pyarrow==19.0.0",
     "python-dotenv==1.0.1",
-    "requests==2.31.0",
+    "requests>=2.32.3",
+    "sqlparse>=0.5.3",
 ]
 
 [build-system]
