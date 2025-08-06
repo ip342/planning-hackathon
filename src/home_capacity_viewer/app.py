@@ -6,7 +6,7 @@ from dash_extensions.javascript import assign
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import requests
-from home_capacity_viewer.llm_handler import LLMQueryHandler
+from home_capacity_viewer.sql_agent import get_sql_agent
 from home_capacity_viewer.data_processor import DataProcessor
 from home_capacity_viewer.database import DatabaseManager
 
@@ -164,8 +164,7 @@ style_handle = assign("""function(feature, context){
 }""")
 
 
-# Initialize LLM query handler
-llm_handler = LLMQueryHandler(water_output_csv, energy_output_csv)
+# SQL agent will be used for queries (initialized in callback)
 
 # Create info control
 def get_info(feature=None, data_source='water'):
@@ -262,7 +261,7 @@ text_query = html.Div(
     style={'padding': '20px'}
 )
 
-# Define the layout
+# Define the layout WITHOUT tabs - just map and text query
 app.layout = html.Div([
     dbc.NavbarSimple(
         brand="H I P E",
@@ -271,51 +270,10 @@ app.layout = html.Div([
         dark=True,
     ),
     dbc.Container([
-        dbc.Tabs(
-            [
-                dbc.Tab(
-                    dbc.Row([
-                        dbc.Col(map_component, width=12),
-                        dbc.Col(text_query, width=12)
-                    ], style={'padding': '20px'}),
-                    label="Map",
-                    tab_id="map-app"
-                ),
-                dbc.Tab(
-                    html.Div([
-                        html.H3("Energy Forecast"),
-                        html.Div(id="energy-table-container")
-                    ], style={'padding': '20px'}),
-                    label="Energy",
-                    tab_id="tab-energy"
-                ),
-                dbc.Tab(
-                    html.Div([
-                        html.H3("Water Forecast"),
-                        html.Div(id="water-table-container")
-                    ], style={'padding': '20px'}),
-                    label="Water",
-                    tab_id="tab-water"
-                ),
-                dbc.Tab(
-                    html.Div([
-                        html.H3("Home Capacity"),
-                        html.Div(id="home-capacity-table-container")
-                    ], style={'padding': '20px'}),
-                    label="Home Capacity",
-                    tab_id="tab-capacity"
-                )
-            ],
-            id="tabs",
-            active_tab="map-app",
-            style={
-                'marginTop': '20px',
-                'marginBottom': '20px',
-                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
-                'borderRadius': '5px',
-                'backgroundColor': 'white'
-            }
-        )
+        dbc.Row([
+            dbc.Col(map_component, width=12),
+            dbc.Col(text_query, width=12)
+        ], style={'padding': '20px'}),
     ], style={'padding': '20px', 'backgroundColor': '#f8f9fa'})
 ])
 
@@ -379,96 +337,17 @@ def update_geojson(year, data_source):
 )
 def update_text_output(n_submit, query):
     if n_submit > 0 and query:
-        response = llm_handler.process_query(query)
-        return response
+        try:
+            response = get_sql_agent(db_manager, query)
+            return response
+        except Exception as e:
+            return f"Error processing query: {str(e)}"
     return 'Press Enter to submit your question'
 
-# Callback to display energy data table
-@app.callback(
-    Output('energy-table-container', 'children'),
-    Input('tabs', 'active_tab')
-)
-def display_energy_table(active_tab):
-    if active_tab == 'tab-energy':
-        return dash_table.DataTable(
-            data=processed_energy_data.to_dict('records'),
-            columns=[{"name": i, "id": i} for i in processed_energy_data.columns],
-            page_size=10,
-            filter_action="native",
-            sort_action="native",
-            style_table={'overflowX': 'auto'},
-            style_cell={
-                'textAlign': 'left',
-                'padding': '10px',
-                'whiteSpace': 'normal',
-                'height': 'auto',
-            },
-            style_header={
-                'backgroundColor': '#011638',
-                'color': 'white',
-                'fontWeight': 'bold'
-            }
-        )
-    return None
-
-# Callback to display water data table
-@app.callback(
-    Output('water-table-container', 'children'),
-    Input('tabs', 'active_tab')
-)
-def display_water_table(active_tab):
-    if active_tab == 'tab-water':
-        return dash_table.DataTable(
-            data=processed_water_data.to_dict('records'),
-            columns=[{"name": i, "id": i} for i in processed_water_data.columns],
-            page_size=10,
-            filter_action="native",
-            sort_action="native",
-            style_table={'overflowX': 'auto'},
-            style_cell={
-                'textAlign': 'left',
-                'padding': '10px',
-                'whiteSpace': 'normal',
-                'height': 'auto',
-            },
-            style_header={
-                'backgroundColor': '#011638',
-                'color': 'white',
-                'fontWeight': 'bold'
-            }
-        )
-    return None
-
-# Callback to display home capacity table
-@app.callback(
-    Output('home-capacity-table-container', 'children'),
-    Input('tabs', 'active_tab')
-)
-def display_home_capacity_table(active_tab):
-    if active_tab == 'tab-capacity':
-        return dash_table.DataTable(
-            data=processed_home_capacity.to_dict('records'),
-            columns=[{"name": i, "id": i} for i in processed_home_capacity.columns],
-            page_size=10,
-            filter_action="native",
-            sort_action="native",
-            style_table={'overflowX': 'auto'},
-            style_cell={
-                'textAlign': 'left',
-                'padding': '10px',
-                'whiteSpace': 'normal',
-                'height': 'auto',
-            },
-            style_header={
-                'backgroundColor': '#011638',
-                'color': 'white',
-                'fontWeight': 'bold'
-            }
-        )
-    return None
+# Removed tab-related callbacks since we don't have tabs anymore
     
 
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True, use_reloader=False, dev_tools_hot_reload=False)
