@@ -12,6 +12,18 @@ import pandas as pd
 from langchain.agents import create_openai_functions_agent
 
 
+class QueryOutput(BaseModel):
+    query: str = Field(description="A syntactically correct SQL query.")
+    
+    @field_validator('query')
+    def validate_sql(cls, v):
+        try:
+            sqlparse.parse(v)
+            return v
+        except:
+            raise ValueError('Invalid SQL syntax')
+
+
 def create_tools(db_manager: DatabaseManager):
     """Create tools bound to the specific db_manager instance"""
 
@@ -35,7 +47,14 @@ def create_tools(db_manager: DatabaseManager):
     def query_db(query: str) -> str:
         """Execute a SQL query on the database. Use this tool to run SELECT statements. 
         The query should be valid SQL syntax. Returns results as JSON format."""
-        return query_database(query, db_manager)
+        # Validate the SQL query using QueryOutput
+        try:
+            validated_query = QueryOutput(query=query).query
+        except ValueError as e:
+            return json.dumps({"error": f"Invalid SQL syntax: {str(e)}"})
+        
+        # Execute the validated query
+        return query_database(validated_query, db_manager)
     
     @tool
     def get_schemas() -> str:
@@ -43,6 +62,7 @@ def create_tools(db_manager: DatabaseManager):
         return get_table_schemas(db_manager)
     
     return [get_schemas, query_db]
+
 
 SYSTEM_PROMPT = """
 You are a SQL analyst that can answer questions about the data in the database.
@@ -56,18 +76,9 @@ Workflow:
 1. First, use get_schemas to understand what tables and columns are available
 2. Then, construct appropriate SQL queries using query_db to answer the user's question
 3. Provide clear, human-readable answers based on the query results
-"""
-class QueryOutput(BaseModel):
-    query: str = Field(description="A syntactically correct SQL query.")
-    
-    @field_validator('query')
-    def validate_sql(cls, v):
-        try:
-            sqlparse.parse(v)
-            return v
-        except:
-            raise ValueError('Invalid SQL syntax')
 
+IMPORTANT: When using the query_db tool, ensure your SQL query is syntactically valid. 
+"""
 
 def get_sql_agent(db_manager: DatabaseManager, question: str):
     """Create a SQL agent that can query the database and return text results"""
